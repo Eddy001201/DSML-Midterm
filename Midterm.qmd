@@ -1,0 +1,212 @@
+---
+title: "Online Food Ordering：Who is more likely to order again?"
+format:
+  dashboard:
+    orientation: rows
+    scrolling: false
+    css: styles.css
+execute:
+  echo: false
+  warning: false
+  message: false
+theme: Morph
+---
+
+## Data cleaning
+
+```{r}
+#| include: false
+
+library(tidyverse)
+library(janitor)
+library(scales)
+
+food_raw <- read_csv("online food delivery dataset.csv", show_col_types = FALSE)
+food_clean <- food_raw %>%
+  clean_names() %>%
+  select(-any_of(c("unnamed_13", "pin_code"))) %>%
+  mutate(across(where(is.character), str_trim)) %>%
+  mutate(
+    monthly_income = factor(
+      monthly_income,
+      levels = c(
+        "No Income", "Below Rs.10000", "10001 to 25000","25001 to 50000", "More than 50000"
+      )
+    ),
+    output = factor(output, levels = c("No", "Yes")),
+    feedback = factor(feedback, levels = c("Negative", "Positive")),
+    age_group = cut(
+      age,
+      breaks = c(17, 20, 23, 26, 29, Inf),
+      labels = c("18–20", "21–23", "24–26", "27–29", "30+"),
+      include.lowest = TRUE
+    )
+  ) %>%
+  distinct()
+```
+
+## Create a cluster statistics
+
+```{r}
+age_stats <- food_clean %>%
+  group_by(age_group) %>%
+  summarise(
+    n = n(),
+    repeat_rate = mean(output == "Yes"),
+    .groups = "drop"
+  )
+
+occupation_stats <- food_clean %>%
+  group_by(occupation) %>%
+  summarise(
+    n = n(),
+    repeat_rate = mean(output == "Yes"),
+    .groups = "drop"
+  ) %>%
+  mutate(
+    occ_label = paste0(occupation, "\n(n=", n, ")"),
+    occupation_ordered = forcats::fct_reorder(occ_label, repeat_rate)
+)
+age_feedback_stats <- food_clean %>%
+  count(age_group, feedback) %>%
+  group_by(age_group) %>%
+  mutate(
+    total_n = sum(n),
+    pct = n / sum(n)) %>%
+  ungroup()
+```
+
+## Row {height="10%"}
+
+The overall reorder rate is good, especially the young people are the most likely to reorder, while those aged 27–29 reorder the least. Positive feedback also declines after age 27, so understanding what drives the lower satisfaction and reorder rate in the 27–29 group could be a key priority.
+
+## Row {height="15%"}
+
+```{r}
+#| content: valuebox
+#| title: "Number of unique records"
+#| icon: people
+#| color: primary
+list(value = nrow(food_clean))
+```
+
+```{r}
+#| content: valuebox
+#| title: "Reorder rate"
+#| icon: arrow-repeat
+#| color: success
+list(value = percent(mean(food_clean$output == "Yes"), accuracy = 0.1))
+```
+
+```{r}
+#| content: valuebox
+#| title: "Positive feedback ratio"
+#| icon: chat-left-text
+#| color: warning
+list(value = percent(mean(food_clean$feedback == "Positive"), accuracy = 0.1))
+```
+
+## Row {height="75%"}
+
+### Column {width="50%"}
+
+```{r}
+#| title: "Key Findings | Reorder Rates in Different Age Groups"
+#| height: 100%
+
+ggplot(age_stats, aes(x = age_group, y = repeat_rate)) +
+  geom_col(fill = "#378A89", width = 0.68) +
+  geom_text(
+    aes(label = paste0(percent(repeat_rate, accuracy = 0.1))),
+    vjust = -0.25,
+    lineheight = 0.9,
+    size = 3.5
+  ) +
+  scale_x_discrete(
+    labels = c(
+      "18–20" = "18–20\n(n=10)",
+      "21–23" = "21–23\n(n=112)",
+      "24–26" = "24–26\n(n=103)",
+      "27–29" = "27–29\n(n=37)",
+      "30+"   = "30+\n(n=23)"
+    )
+  ) +
+  scale_y_continuous(
+    labels = percent_format(accuracy = 1),
+    limits = c(0, 1.08),
+    expand = expansion(mult = c(0, 0))
+  ) +
+  labs(x = "Age group", y = "Reorder Rate") +
+  theme_minimal(base_size = 12) +
+  theme(panel.grid.minor = element_blank())
+```
+
+### Column {width="50%"}
+
+#### Row {height="50%"}
+
+```{r}
+#| title: "Supplement 1 | Reorder Rates for Different Occupations"
+#| height: 100%
+
+ggplot(occupation_stats, aes(x = occupation_ordered, y = repeat_rate)) +
+  geom_col(fill = "#7B91B8", width = 0.68) +
+  geom_text(
+    aes(label = paste0(percent(repeat_rate, accuracy = 0.1))),
+    hjust = -0.10,
+    size = 3.1
+  ) +
+  coord_flip() +
+  scale_y_continuous(
+    labels = percent_format(accuracy = 1),
+    limits = c(0, 1.18),
+    expand = expansion(mult = c(0, 0))
+  ) +
+  labs(x = NULL, y = "Reorder Rate") +
+  theme_minimal(base_size = 11) +
+  theme(panel.grid.minor = element_blank())
+```
+
+#### Row {height="50%"}
+
+```{r}
+#| title: "Supplement 2 | Customer Feedback by Age Group"
+#| height: 100%
+
+ggplot(age_feedback_stats, aes(x = age_group, y = pct, fill = feedback)) +
+  geom_col(width = 0.62) +
+  geom_text(
+    aes(label = ifelse(pct >= 0.12, percent(pct, accuracy = 1), "")),
+    position = position_stack(vjust = 0.5),
+    color = "white",
+    size = 3.2
+  ) +
+  scale_x_discrete(
+    labels = c(
+      "18–20" = "18–20\n(n=10)",
+      "21–23" = "21–23\n(n=112)",
+      "24–26" = "24–26\n(n=103)",
+      "27–29" = "27–29\n(n=37)",
+      "30+"   = "30+\n(n=23)"
+    )
+  ) +
+  scale_y_continuous(
+    labels = percent_format(accuracy = 1),
+    limits = c(0, 1),
+    expand = expansion(mult = c(0, 0))
+  ) +
+  scale_fill_manual(
+    values = c("Negative" = "#D97A75", "Positive" = "#59A58C"),
+    labels = c("Negative" = "Negative", "Positive" = "Positive")
+  ) +
+  labs(
+    x = "Age Group", 
+    y = "Feedback Proportion within Age Group", 
+    fill = "Customer Feedback"
+  ) +
+  theme_minimal(base_size = 11) +
+  theme(
+    panel.grid.minor = element_blank(),
+    legend.position = "bottom"
+  )
+```
