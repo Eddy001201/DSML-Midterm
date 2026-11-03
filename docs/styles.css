@@ -1,0 +1,69 @@
+body {
+  font-size: 20px;
+}
+
+h1, h2, h3 {
+  font-size: 1.5rem;
+}
+
+.card-title {
+  font-size: 1.5rem !important;
+  font-weight: 500;
+}
+
+.plotly text,
+svg text {
+  font-size: 14px;
+}
+
+/* 增加卡片可用空間 */
+.card {
+  height: 100%;
+}
+
+/* 讓圖表盡量使用卡片寬度 */
+.card-body {
+  width: 100%;
+  min-width: 0;
+}
+
+/* 增加圖表顯示高度 */
+.cell-output-display,
+.html-widget {
+  width: 100% !important;
+  max-width: 100%;
+}
+
+/* 避免圖表被容器裁切 */
+.card-body .plotly,
+.card-body .html-widget {
+  overflow: visible;
+}
+
+/* 放大結論區塊文字 */
+.callout,
+.card p {
+  font-size: 21px !important;
+  line-height: 1.6 !important;
+}
+
+/* 放大 Dashboard 標題 */
+.navbar-title {
+  font-size: 24px !important;
+}
+
+/* 放大卡片標題 */
+.card-header {
+  font-size: 20px !important;
+  font-weight: 700 !important;
+}
+
+```{=html}
+<style>
+.card-header {
+  padding: 0.2rem 0.75rem !important;
+  font-size: 0.9rem;
+  line-height: 1.2;
+}
+</style>
+```
